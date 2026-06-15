@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Akasha — 3D vault map</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="graph"></div>
+
+  <header id="topbar">
+    <div id="brand">
+      <span id="brand-name">Akasha</span>
+    </div>
+
+    <nav id="menubar">
+      <div class="menu">
+        <span class="menu-label">File</span>
+        <div class="dropdown">
+          <button id="mi-rescan">Rescan Vault <span class="mi-hint">incremental</span></button>
+          <button id="mi-rescan-full">Full Rescan <span class="mi-hint">cold, re-reads all</span></button>
+          <hr />
+          <button id="mi-reload">Reload App <span class="mi-hint">F5</span></button>
+          <button id="mi-export">Export Image (PNG)</button>
+        </div>
+      </div>
+      <div class="menu">
+        <span class="menu-label">View</span>
+        <div class="dropdown">
+          <button id="mi-fullscreen">Toggle Fullscreen <span class="mi-hint">F11</span></button>
+          <button id="mi-resetcam">Reset Camera</button>
+          <hr />
+          <div class="mi-group" id="mi-themes"></div>
+          <hr />
+          <div class="mi-group" id="mi-gfx"></div>
+        </div>
+      </div>
+      <div class="menu">
+        <span class="menu-label">Tools</span>
+        <div class="dropdown">
+          <button id="mi-settings">Display Settings…</button>
+          <hr />
+          <button id="mi-copyfocus">Copy Link to Selected Note</button>
+          <button id="mi-obsidian">Open Selected in Obsidian</button>
+        </div>
+      </div>
+      <div class="menu">
+        <span class="menu-label">Help</span>
+        <div class="dropdown">
+          <button id="mi-shortcuts">Keyboard &amp; Mouse Controls</button>
+          <button id="mi-about">About Akasha</button>
+        </div>
+      </div>
+    </nav>
+
+    <div id="search-wrap">
+      <input id="search" type="search" placeholder="Search notes…  (press /)" autocomplete="off" />
+      <div id="search-results"></div>
+    </div>
+    <span id="brand-stats"></span>
+  </header>
+
+  <div id="modal-backdrop" class="hidden">
+    <div id="modal">
+      <div id="modal-head"><h2 id="modal-title"></h2><button id="modal-close">✕</button></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <aside id="legend"></aside>
+
+  <div id="controls">
+    <label><input type="checkbox" id="toggle-glow" checked /> glow</label>
+    <label><input type="checkbox" id="toggle-labels" checked /> labels</label>
+    <label><input type="checkbox" id="toggle-phantoms" /> unwritten notes</label>
+    <label><input type="checkbox" id="toggle-orphans" checked /> orphans</label>
+    <label>focus depth
+      <select id="depth">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+      </select>
+    </label>
+    <label>group by
+      <select id="group">
+        <option value="folder">folder</option>
+        <option value="tag">tag</option>
+      </select>
+    </label>
+    <label>graphics
+      <select id="gfx">
+        <option value="low">low</option>
+        <option value="medium">med</option>
+        <option value="high">high</option>
+      </select>
+    </label>
+    <label>nodes
+      <select id="nodes">
+        <option value="classic">classic</option>
+        <option value="dodecahedron">dodecahedron</option>
+        <option value="starlight">starlight</option>
+        <option value="particles">particles</option>
+      </select>
+    </label>
+    <label>theme
+      <select id="theme">
+        <option value="midnight">midnight</option>
+        <option value="gilded">gilded</option>
+        <option value="manuscript">manuscript</option>
+        <option value="notebook">notebook</option>
+        <option value="cosmos">cosmos</option>
+        <option value="dracula">dracula</option>
+        <option value="nord">nord</option>
+        <option value="tokyonight">tokyo night</option>
+        <option value="gruvbox">gruvbox</option>
+        <option value="monokai">monokai</option>
+      </select>
+    </label>
+    <button id="filters-btn" title="Filter which nodes show">⛃ filters</button>
+    <button id="settings-btn" title="Display settings">⚙ settings</button>
+    <span id="hint">drag rotate · arrows fly · scroll/± zoom · right-drag/shift+arrows pan · click focus · dbl-click → Obsidian · esc clear</span>
+  </div>
+
+  <aside id="settings" class="hidden">
+    <h3>Display</h3>
+    <label class="setting">label distance
+      <input type="range" id="label-distance" min="100" max="2500" step="50" value="700" />
+      <span class="val" id="label-distance-val">700</span>
+    </label>
+    <label class="setting">label size
+      <input type="range" id="label-size" min="2" max="12" step="0.5" value="4" />
+      <span class="val" id="label-size-val">4</span>
+    </label>
+    <label class="setting">node size
+      <input type="range" id="node-size" min="1" max="10" step="0.5" value="4" />
+      <span class="val" id="node-size-val">4</span>
+    </label>
+    <label class="setting">link opacity
+      <input type="range" id="link-opacity" min="0" max="50" value="16" />
+      <span class="val" id="link-opacity-val">16%</span>
+    </label>
+    <label class="setting">min link weight
+      <input type="range" id="min-weight" min="1" max="5" value="1" />
+      <span class="val" id="min-weight-val">1</span>
+    </label>
+    <label class="setting">particles / node
+      <select id="pc">
+        <option value="auto">auto</option>
+        <option value="1024">1024</option>
+        <option value="4096">4096</option>
+        <option value="8192">8192</option>
+        <option value="16384">16384</option>
+      </select>
+      <span class="val"></span>
+    </label>
+    <h3 style="margin-top:10px">Node size weighting</h3>
+    <label class="setting">incoming links
+      <input type="range" id="w-in" min="0" max="2" step="0.1" value="1" />
+      <span class="val" id="w-in-val">1.0</span>
+    </label>
+    <label class="setting">outgoing links
+      <input type="range" id="w-out" min="0" max="2" step="0.1" value="0.5" />
+      <span class="val" id="w-out-val">0.5</span>
+    </label>
+    <label class="setting">words in file
+      <input type="range" id="w-words" min="0" max="2" step="0.1" value="0.5" />
+      <span class="val" id="w-words-val">0.5</span>
+    </label>
+    <label class="setting">size contrast
+      <input type="range" id="w-contrast" min="0.5" max="3" step="0.1" value="1.5" />
+      <span class="val" id="w-contrast-val">1.5</span>
+    </label>
+    <button id="reset-colors" title="Forget custom group colors">reset custom colors</button>
+  </aside>
+
+  <aside id="filters" class="hidden">
+    <h3>Filters</h3>
+    <div class="filter-row filter-new">
+      <button class="filter-mode" id="filter-mode" data-mode="show" title="Toggle show / ignore">show</button>
+      <button class="filter-pm" id="filter-add" title="Add filter">+</button>
+      <input id="filter-input" type="text" placeholder="name, macro*, *lipid…" autocomplete="off" spellcheck="false" />
+    </div>
+    <div id="filter-list"></div>
+    <div id="filter-help"><b>show</b> keeps matches, <b>ignore</b> hides them. Top rule wins; drag to reorder.</div>
+  </aside>
+
+  <aside id="reader" class="hidden">
+    <div id="reader-resize-w" title="Drag to resize"></div>
+    <div id="reader-resize-corner" title="Drag to resize"></div>
+    <div id="reader-head" title="Drag to move · double-click to re-dock">
+      <div>
+        <h2 id="reader-title"></h2>
+        <div id="reader-path"></div>
+      </div>
+      <div id="reader-actions">
+        <button id="open-obsidian" title="Open in Obsidian">Obsidian</button>
+        <button id="reader-close" title="Close (esc)">✕</button>
+      </div>
+    </div>
+    <article id="reader-body"></article>
+  </aside>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+node_modules/
+web/dist/
+data/
+*.local.json
+.env*
+dist/
+desktop/dist/
+release/
+*.tgz
+code_review.md
+CODE_REVIEW.md
+demo-vault/
+scripts/dist/

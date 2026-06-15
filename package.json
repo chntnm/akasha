@@ -1,0 +1,96 @@
+{
+  "name": "akasha-graph",
+  "version": "1.0.1",
+  "description": "Akasha — your Obsidian vault or Open Knowledge Format bundle as a navigable 3D universe.",
+  "type": "module",
+  "main": "dist/cli.cjs",
+  "bin": {
+    "akasha": "dist/cli.cjs"
+  },
+  "files": [
+    "dist/",
+    "web/dist/",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_LICENSES.md"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chntnm/akasha.git"
+  },
+  "homepage": "https://github.com/chntnm/akasha#readme",
+  "bugs": {
+    "url": "https://github.com/chntnm/akasha/issues"
+  },
+  "keywords": [
+    "obsidian",
+    "knowledge-graph",
+    "3d",
+    "visualization",
+    "three.js",
+    "second-brain",
+    "force-graph",
+    "open-knowledge-format",
+    "okf"
+  ],
+  "scripts": {
+    "scan": "tsx scanner/scan.ts",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "tsx server/index.ts",
+    "dev:web": "vite web",
+    "build": "vite build web",
+    "build:cli": "esbuild bin/cli.ts --bundle --platform=node --format=cjs --external:express --outfile=dist/cli.cjs",
+    "start": "tsx server/index.ts",
+    "desktop:build": "vite build web && esbuild desktop/main.ts --bundle --platform=node --format=cjs --external:electron --external:express --outfile=desktop/dist/main.cjs",
+    "desktop": "npm run desktop:build && electron .",
+    "dist:desktop": "npm run desktop:build && electron-builder --win",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run build && npm run build:cli"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "3d-force-graph": "^1.77.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/three": "^0.184.1",
+    "concurrently": "^9.0.0",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.28.0",
+    "marked": "^15.0.0",
+    "minisearch": "^7.2.0",
+    "three": "0.184.0",
+    "three-spritetext": "^1.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  },
+  "build": {
+    "appId": "com.conquerorchin.akasha",
+    "productName": "Akasha",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/dist/**",
+      "web/dist/**",
+      "THIRD_PARTY_LICENSES.md"
+    ],
+    "asarUnpack": [
+      "web/dist/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

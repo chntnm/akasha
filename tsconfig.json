@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    // Target ES2022 (modern JS with optional chaining, nullish coalescing, etc.)
+    "target": "ES2022",
+    // Use ESM (ECMAScript modules) for bundling; esbuild will transpile to CommonJS where needed
+    "module": "ESNext",
+    // Resolve modules as bundler would (enables package exports, conditional imports)
+    "moduleResolution": "bundler",
+    // Include DOM types (for browser code) + Node types (for server code)
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Enable strict type checking (recommended for production code)
+    "strict": true,
+    // Skip type checking of node_modules (faster compilation)
+    "skipLibCheck": true,
+    // Enable CommonJS interop for default exports
+    "esModuleInterop": true,
+    // Allow importing JSON files
+    "resolveJsonModule": true,
+    // Don't emit JS output (this is a type-checking pass only; bundlers emit)
+    "noEmit": true,
+    // Include Node.js and browser built-in types
+    "types": ["node"]
+  },
+  // Files to include in type checking
+  "include": ["scanner", "server", "web/src", "web/vite.config.ts"]
+}
