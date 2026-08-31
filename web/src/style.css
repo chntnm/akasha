@@ -1,0 +1,881 @@
+:root {
+  --bg: #070a10;
+  --panel: rgba(13, 17, 23, 0.88);
+  --border: #30363d;
+  --fg: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+#graph { position: fixed; inset: 0; }
+
+/* ---------- top bar ---------- */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 18px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* The dropdowns are children of #topbar, and position: fixed makes that bar a
+   stacking context, so a dropdown's own z-index can never lift it past the
+   bar's. At the resting z-index of 10 the bar tied with #sidebar and lost on
+   DOM order, so the file explorer painted over any open menu.
+
+   Lift the whole bar only while a menu is actually open: 60 clears #sidebar
+   (10), #settings/#filters (15) and #reader (20), and stays under
+   #modal-backdrop (100). Raising it permanently is what breaks instead — the
+   reader docks to the top-right and its header would then be painted over by
+   the search box and the note-count stats. */
+#topbar:has(.menu.open) {
+  z-index: 60;
+}
+
+/* #topbar sets pointer-events: none so the graph stays draggable through the
+   empty space around the bar; every interactive child has to opt back in. */
+#claude-btn {
+  pointer-events: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+#claude-btn:hover { background: var(--panel); border-color: var(--border); }
+#claude-btn:disabled { opacity: 0.45; cursor: default; }
+#claude-btn svg { display: block; }
+
+#brand { display: flex; align-items: baseline; gap: 10px; pointer-events: auto; }
+#brand-name { font-size: 22px; font-weight: 650; letter-spacing: 0.5px; }
+#brand-stats { color: var(--muted); font-size: 13px; font-family: Consolas, monospace; }
+
+/* ---------- menubar ---------- */
+#menubar { display: flex; pointer-events: auto; }
+
+.menu { position: relative; }
+.menu-label {
+  display: inline-block;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--fg);
+  border-radius: 6px;
+  cursor: default;
+  user-select: none;
+}
+.menu.open .menu-label,
+.menu-label:hover { background: var(--panel); }
+
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 230px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.menu.open .dropdown { display: block; }
+
+.dropdown button {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font-size: 13px;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.dropdown button:hover { background: rgba(125, 125, 160, 0.14); }
+.dropdown button:disabled { opacity: 0.4; cursor: default; }
+.dropdown hr { border: none; border-top: 1px solid var(--border); margin: 5px 4px; }
+.mi-hint { color: var(--muted); font-size: 11px; }
+.mi-group .checked::before { content: "✓ "; color: var(--accent); }
+.mi-group button:not(.checked) { padding-left: 26px; }
+.mi-group .checked { padding-left: 10px; }
+
+/* ---------- modal ---------- */
+#modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#modal-backdrop.hidden { display: none; }
+#modal {
+  width: min(540px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  backdrop-filter: blur(10px);
+}
+#modal-head { display: flex; justify-content: space-between; align-items: center; }
+#modal-head h2 { margin: 0; font-size: 17px; }
+#modal-close {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+#modal-body { margin-top: 12px; font-size: 13.5px; line-height: 1.6; }
+#modal-body table { width: 100%; border-collapse: collapse; }
+#modal-body td { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+#modal-body td:first-child { color: var(--muted); white-space: nowrap; }
+#modal-body kbd {
+  background: rgba(125, 125, 160, 0.15);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-family: Consolas, monospace;
+}
+
+#search {
+  pointer-events: auto;
+  width: 320px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  font-size: 14px;
+  outline: none;
+}
+#search:focus { border-color: var(--accent); }
+
+#search-wrap { position: relative; pointer-events: auto; margin-left: auto; }
+
+#search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 360px;
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: 11;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.result:hover { background: rgba(88, 166, 255, 0.12); }
+.result .count { margin-left: auto; color: var(--muted); font-size: 12px; flex: 0 0 auto; }
+.result-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.result .snippet {
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- legend ---------- */
+/* ---------- left sidebar: file explorer + group legend ---------- */
+#sidebar {
+  position: fixed;
+  top: 56px;
+  left: 12px;
+  bottom: 96px;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 10;
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+#sidebar.hidden { transform: translateX(-115%); opacity: 0; pointer-events: none; }
+
+#sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+#sidebar-title { font-weight: 600; letter-spacing: 0.02em; }
+#sidebar-head button {
+  margin-left: auto;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+#sidebar-head button + button { margin-left: 0; }
+#sidebar-head button:hover { color: var(--accent); border-color: var(--border); }
+
+/* show-again affordance once the sidebar is dismissed */
+#sidebar-show {
+  position: fixed;
+  top: 56px;
+  left: 12px;
+  z-index: 11;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+#sidebar-show:hover { border-color: var(--accent); }
+#sidebar-show.hidden { display: none; }
+
+/* ---- file tree ---- */
+#filetree {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 6px 4px 10px;
+  min-height: 0;
+}
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.tree-row:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.tree-row.active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--fg);
+}
+/* files that aren't notes or media: visible for completeness, not clickable */
+.tree-row.inert { cursor: default; opacity: 0.45; }
+.tree-row.inert:hover { background: none; }
+
+.tree-caret {
+  flex: 0 0 auto;
+  width: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 10px;
+  transition: transform 0.12s ease;
+}
+.tree-row.collapsed .tree-caret { transform: rotate(-90deg); }
+.tree-icon { flex: 0 0 auto; width: 14px; text-align: center; opacity: 0.75; font-size: 11px; }
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tree-row.dir .tree-name { font-weight: 600; }
+.tree-children.collapsed { display: none; }
+
+/* ---- legend, now docked under the tree ---- */
+#legend-wrap {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border);
+  padding: 8px 10px 10px;
+  max-height: 40%;
+  overflow: auto;
+}
+#legend-head {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  cursor: pointer;
+  user-select: none;
+}
+.legend-row.off { opacity: 0.35; text-decoration: line-through; }
+.legend-row .count { margin-left: auto; color: var(--muted); font-size: 11px; padding-left: 14px; }
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+/* legend color pickers: look like dots, act like inputs */
+.dot-pick {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.dot-pick::-webkit-color-swatch-wrapper { padding: 0; }
+.dot-pick::-webkit-color-swatch {
+  border: 1px solid rgba(128, 128, 160, 0.35);
+  border-radius: 50%;
+}
+.legend-name {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#reset-colors {
+  margin-top: 8px;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#reset-colors:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---------- bottom controls ---------- */
+#controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  /* wrap: the row outgrows narrow viewports, and without this the trailing
+     filters/settings buttons overflow past the right edge unreachably */
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 10px 18px;
+  /* scrim in the theme's own background, not a fixed dark: on the light
+     themes the hardcoded navy smudged the page and washed out the labels */
+  background: linear-gradient(transparent, rgba(7, 10, 16, 0.9));
+  background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 92%, transparent));
+  font-size: 13px;
+  color: var(--muted);
+  z-index: 10;
+}
+#controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+#controls select {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+#controls input[type="range"] {
+  width: 90px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+#hint {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.75;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 1px dotted var(--border);
+}
+#hint:hover { opacity: 1; color: var(--accent); border-bottom-color: var(--accent); }
+
+#settings-btn {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#settings-btn:hover { border-color: var(--accent); }
+
+/* ---------- display settings panel ---------- */
+#settings {
+  position: fixed;
+  bottom: 52px;
+  left: 18px;
+  width: 270px;
+  /* With every group expanded the panel can outgrow the window. The 160px
+     reserve (not 120) is what keeps its top below #sidebar-show: the panel is
+     bottom-anchored at 52, so its top lands at 100vh - 52 - height, and a
+     120px reserve floored that at 68px — right on top of the ☰ button
+     (56–89px) that is the only way to bring the file explorer back. At 160 the
+     top floors at 108px and clears it. Only bites under ~814px of viewport
+     height, which is why it looks fine at 1080p and breaks on a laptop. */
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  z-index: 15;
+  backdrop-filter: blur(6px);
+  font-size: 13px;
+}
+#settings.hidden { display: none; }
+/* the file explorer owns the left gutter; slide the panel clear of it */
+body.sidebar-open #settings { left: 286px; }
+#settings h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.setting {
+  display: grid;
+  grid-template-columns: 1fr 100px 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  color: var(--muted);
+}
+.setting .val { color: var(--fg); font-family: Consolas, monospace; font-size: 12px; text-align: right; }
+
+/* ---------- filters panel ---------- */
+#filters {
+  position: fixed;
+  bottom: 52px;
+  /* Slide clear of the docked reader. The reader pins to the right edge at
+     z-20 and the filters panel sits at z-15 and the same edge, so an open
+     reader covered the panel completely — all 280px of it, input included.
+     --reader-dock-w is published by applyGeom() in main.ts: the reader's live
+     width while it is open and docked, 0px otherwise. Deliberately not applied
+     to the floating reader: a reader the user dragged somewhere is placed on
+     purpose, and panels jumping out from under it reads worse than the
+     overlap. */
+  right: calc(18px + var(--reader-dock-w, 0px));
+  transition: right 0.25s ease;
+  width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  z-index: 15;
+  backdrop-filter: blur(6px);
+  font-size: 13px;
+}
+#filters.hidden { display: none; }
+#filters h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.filter-row.filter-new { padding-bottom: 8px; }
+.filter-mode {
+  flex: 0 0 auto;
+  width: 52px;
+  text-align: center;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 0;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: lowercase;
+}
+.filter-mode[data-mode="show"] { border-color: var(--accent); color: var(--accent); }
+.filter-mode[data-mode="ignore"] { border-color: #e06c6c; color: #e06c6c; }
+.filter-pm {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.filter-pm:hover { border-color: var(--accent); }
+#filter-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+#filter-input:focus { outline: none; border-color: var(--accent); }
+#filter-list .filter-row {
+  cursor: grab;
+  border-radius: 6px;
+}
+#filter-list .filter-row.dragging { opacity: 0.4; }
+#filter-list .filter-row.drop-target { box-shadow: inset 0 2px 0 var(--accent); }
+.filter-drag { flex: 0 0 auto; color: var(--muted); cursor: grab; user-select: none; font-size: 13px; }
+.filter-pattern {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg);
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+#filter-help { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+/* ---------- reader panel ---------- */
+#reader {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 42vw);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease;
+}
+#reader.hidden { transform: translateX(120%); pointer-events: none; }
+#reader.dragging, #reader.resizing { transition: none; user-select: none; }
+
+/* floating (undocked) mode: full border, shadow, rounded */
+#reader.floating {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+#reader.floating.hidden { transform: translateY(120%); }
+
+#reader-head { cursor: grab; }
+#reader.dragging #reader-head { cursor: grabbing; }
+#reader-actions { cursor: default; }
+
+/* resize handles */
+#reader-resize-w {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  z-index: 3;
+}
+#reader-resize-w:hover { background: linear-gradient(90deg, transparent, rgba(125, 145, 180, 0.25)); }
+#reader-resize-corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 3;
+  display: none;
+  background:
+    linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
+      transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%) no-repeat;
+  opacity: 0.6;
+}
+#reader.floating #reader-resize-corner { display: block; }
+
+#reader-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+#reader-head h2 { margin: 0 0 4px; font-size: 19px; }
+#reader-path { color: var(--muted); font-size: 12px; font-family: Consolas, monospace; word-break: break-all; }
+
+#reader-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+#reader-actions button {
+  /* tint from the theme's own foreground so the control reads as raised on
+     light themes too; the flat #21262d it replaced was invisible on those */
+  background: rgba(128, 128, 128, 0.16);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#reader-actions button:hover { border-color: var(--accent); }
+
+#reader-body {
+  padding: 14px 18px 30px;
+  overflow-y: auto;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+#reader-body h1, #reader-body h2, #reader-body h3 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+#reader-body h4, #reader-body h5, #reader-body h6 { margin: 18px 0 6px; }
+#reader-body a.wiki {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+}
+#reader-body a.wiki:hover { border-bottom-style: solid; }
+#reader-body a { color: var(--accent); }
+
+/* Code: tinted from the theme foreground rather than a fixed dark, so fences
+   stay readable on the light themes (manuscript / notebook) too. */
+#reader-body code {
+  background: rgba(128, 128, 128, 0.16);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: Consolas, "SF Mono", Menlo, monospace;
+}
+#reader-body pre {
+  background: rgba(128, 128, 128, 0.16);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+/* the fence already carries the plate; don't double it on the inner <code> */
+#reader-body pre code { background: none; padding: 0; border-radius: 0; }
+
+#reader-body blockquote {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+}
+
+/* Tables: GFM tables are on by default in marked, but arrived unstyled.
+   display:block + width:max-content lets a wide table scroll inside the
+   panel instead of forcing the whole reader to scroll sideways. */
+#reader-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 13.5px;
+}
+#reader-body th, #reader-body td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+#reader-body thead th {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--fg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+#reader-body tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+/* Embedded media keeps to the panel width whatever its natural size. */
+#reader-body img,
+#reader-body video,
+#reader-body audio,
+#reader-body iframe {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+#reader-body audio { border: none; }
+#reader-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+#reader-body ul, #reader-body ol { padding-left: 22px; }
+#reader-body li { margin: 3px 0; }
+#reader-body table code { white-space: nowrap; }
+
+.muted { color: var(--muted); }
+
+/* ---------- vault switcher (File › Open Vault…) ---------- */
+.vault-pick { display: flex; gap: 8px; margin: 12px 0 4px; }
+.vault-pick input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: Consolas, monospace;
+}
+.vault-pick input:focus { outline: none; border-color: var(--accent); }
+.vault-pick button {
+  flex: 0 0 auto;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.vault-pick button:hover { border-color: var(--accent); color: var(--accent); }
+.vault-h {
+  margin: 18px 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.vault-recents { display: flex; flex-direction: column; gap: 4px; }
+.vault-recent {
+  /* name and note count on one line, path beneath: the path is the thing that
+     tells two same-named vaults apart, so it is always shown, never elided
+     into the name. */
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 7px 10px;
+  cursor: pointer;
+  color: var(--fg);
+  font-size: 13px;
+}
+.vault-recent:hover { background: var(--panel); border-color: var(--border); }
+.vault-name { font-weight: 600; }
+.vault-notes { color: var(--muted); font-size: 12px; }
+.vault-path {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.tip {
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-family: Georgia, "Palatino Linotype", "Book Antiqua", serif;
+  font-size: 13px;
+  color: var(--fg);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 10px 28px rgba(0, 0, 0, 0.5);
+}
+.tip-title {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+.tip-body {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* collapsible sections inside the settings panel */
+.settings-group { border-top: 1px solid var(--border); padding: 2px 0 6px; }
+.settings-group:first-of-type { border-top: none; }
+.settings-group > summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 7px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  list-style: none;
+}
+.settings-group > summary::-webkit-details-marker { display: none; }
+.settings-group > summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 12px;
+  transition: transform 0.12s ease;
+}
+.settings-group[open] > summary::before { transform: rotate(90deg); }
+.settings-group > summary:hover { color: var(--accent); }
